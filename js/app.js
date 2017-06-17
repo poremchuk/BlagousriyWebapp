@@ -47,11 +47,29 @@ class JSONRequester {
 	}
 };
 
+class SiteMenu {
+	constructor(triggers) {
+		this.sections = [];
+		triggers.map((e, i) => {
+			if (e.section) this.sections.push(e.section);
+			Array.from(e.trigger).map((t) => {
+				t.addEventListener('click', (event) => {
+					event.preventDefault();
+					this.sections.map((s) => s.style.display = 'none');
+					e.section.style.display = 'block';
+				}, false);
+			});
+		});
+	}
+};
+
 // Application Class
 // All website's logic contented here
 //
 class Application {
-  constructor() {
+  constructor(menu) {
+		// Site Menu
+		this.menu = menu;
 
 		// JSON processor
     this.requster = new JSONRequester();
