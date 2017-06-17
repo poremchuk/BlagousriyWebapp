@@ -126,6 +126,7 @@ class Application {
 
 			// adding defect to the map
 			// TODO: process errors
+			const allDefects = document.querySelector('#allDefects');
 			data.map((defect) => {
 				this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${defect.id}`, (err, components) => {
 					if (err) return alert(err);
@@ -135,6 +136,25 @@ class Application {
 							L.marker([e.value.lat, e.value.lng], { title: defect.title }).addTo(this.map);
 						});
 				});
+				// date transformation to user-friendly
+				const date = new Date(defect['date_created']);
+				// adding defect card to the page
+        allDefects.insertAdjacentHTML('beforeend', `
+					<div class="col-xs-12 col-sm-3">
+						<div class="card">
+							<img class="img-responsive" src="${defect['title_image']}">
+							<div class="card-meta">
+								<span class="date">${date.getDate()} ${MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
+								<span class="tags"><a href="#">${defect['created_by_name']}</a></span>
+							</div>
+							<div class="card-content">
+								<h5><a href="#${defect.id}">${defect.title}</a></h5>
+								<p>${defect['state_field_name']}</p>
+								<a href="#${defect.id}" class="more">Детальніше</a>
+							</div>
+						</div>
+					</div>
+        `);
 			});
     });
   }
