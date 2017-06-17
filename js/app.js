@@ -74,7 +74,7 @@ class Application {
 
 		// Adding map to the page
     this.map = L.map('map', { scrollWheelZoom: false }).setView([49, 33], 6);
-		L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(this.map);
+		L.tileLayer('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(this.map);
 		this.map.on('focus', () => this.map.scrollWheelZoom.enable());
 		this.map.on('blur', () => this.map.scrollWheelZoom.disable());
 
@@ -84,7 +84,7 @@ class Application {
       if (err) return alert(err);
       const defects = document.querySelector('#defects');
 			// displays last 4 defects
-      data.sort((a, b) => new Date(b['date_created']) - new Date(a['date_created'])).slice(0, 4).map((defect) => {
+      data.sort((a, b) => new Date(b['date_created']) - new Date(a['date_created'])).slice(0, 8).map((defect) => {
 				// date transformation to user-friendly
 				const date = new Date(defect['date_created']);
 				// adding defect card to the page
