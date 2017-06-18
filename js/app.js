@@ -47,27 +47,35 @@ class JSONRequester {
 	}
 };
 
+// Single Page behaviour class
+//
 class SiteMenu {
 	constructor(triggers) {
 		this.sections = [];
+		this.top = document.getElementById('page-top');
 		triggers.map((e) => {
 			if (e.section) this.sections.push(e.section);
+			// multiple triggers may trigger section/modal opening
+			// and data updating
 			Array.from(e.trigger).map((t) => {
 				t.addEventListener('click', (event) => {
 					event.preventDefault();
 					if (e.updater) e.updater();
 					if (e.section) this.sections.map((s) => s.style.display = 'none');
 					if (e.section) e.section.style.display = 'block';
+					window.scrollTo(0, 0);
 				}, false);
 			});
 		});
+		// displaying first section
 		this.sections.map((s) => s.style.display = 'none');
 		this.sections[0].style.display = 'block';
+		window.scrollTo(0, 0);
 	}
 };
 
 // Application Class
-// All website's logic contented here
+// Almost all website's logic contented here
 //
 class Application {
   constructor(menu) {
@@ -111,9 +119,11 @@ class Application {
 		// TODO: process errors
 		this.requster.get('http://drohobych.ml/api/v1/documents/?workflow_type=defekt', (err, data) => {
 			if (err) return alert(err);
+			/*************************************************************
+			 * Displaying recent 8 defects on main subpage
+			 *************************************************************/
 			const defects = document.querySelector('#defects');
 			defects.innerHTML = '';
-			// displays last 4 defects
 			data.sort((a, b) => new Date(b['date_created']) - new Date(a['date_created'])).slice(0, 8).map((defect) => {
 				// date transformation to user-friendly
 				const date = new Date(defect['date_created']);
@@ -123,8 +133,8 @@ class Application {
 						<div class="card">
 							<img class="img-responsive" src="${defect['title_image']}">
 							<div class="card-meta">
-								<span class="date">${date.getDate()} ${this.MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
-								<span class="tags"><a href="#">${defect['created_by_name']}</a></span>
+								<span>${date.getDate()} ${this.MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
+								<span><a href="#">${defect['created_by_name']}</a></span>
 							</div>
 							<div class="card-content">
 								<h5><a href="#${defect.id}">${defect.title}</a></h5>
@@ -135,8 +145,7 @@ class Application {
 					</div>
 				`);
 			});
-			
-			// adding defect to the map
+
 			// TODO: process errors
 			const allDefects = document.querySelector('#allDefects');
 			allDefects.innerHTML = '';
@@ -144,6 +153,9 @@ class Application {
 			data.map((defect) => {
 				this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${defect.id}`, (err, components) => {
 					if (err) return alert(err);
+					/*************************************************************
+					 * Adding defects whereabouts to the map
+					 *************************************************************/
 					components
 						.filter((e) => e['form_component_name'] === 'Map')
 						.map((e) => {
@@ -152,9 +164,10 @@ class Application {
 						});
 				});
 				// this.requster.get(`http://nominatim.openstreetmap.org/reverse?format=json&lat=${e.value.lat}&lon=${e.value.lng}&zoom=18&accept-language=uk`, (err, addressData) => {});
-				// date transformation to user-friendly
+				/*************************************************************
+				 * Displaying all defects on defects database subpage
+				 *************************************************************/
 				const date = new Date(defect['date_created']);
-				// adding defect card to the page
 				allDefects.insertAdjacentHTML('beforeend', `
 					<div class="col-xs-12 col-sm-3">
 						<div class="card">
@@ -174,9 +187,5 @@ class Application {
 			});
 			this.map.addLayer(this.map.markers);
 		});
-	}
-
-	getURLhashParam(url) {
-		const parsedURL = url || new URL(window.location.href);
 	}
 }
