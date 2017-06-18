@@ -201,10 +201,11 @@ class Application {
 		date 	 = date ? new Date(date.trim().toLowerCase()).toDateString() : '';
 		const allDefects = document.getElementById('allDefects');
 		allDefects.innerHTML = '';
+		let foundResults = false;
 		// data upload from API
 		this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/`, (err, defectsDetails) => {
 			this.requster.get('http://drohobych.ml/api/v1/documents/?workflow_type=defekt', (err, defects) => {
-				defects.map((defect) => {
+				defects.map((defect, i) => {
 					const defectDate = new Date(defect['date_created']);
 					if (date !== '' && defectDate.toDateString() !== date) return;
 					if (status !== '' && defect['state_field_name'].toLowerCase() !== status) return;
@@ -215,8 +216,10 @@ class Application {
 					this.requster.get(
 						`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`,
 						(err, defectAddress) => {
+							if (!foundResults && i === defects.length - 1) allDefects.innerHTML = '<p class="lead">Результатів не знайдено.</p>';
 							if (region !== '' && defectAddress.address.state && defectAddress.address.state.toLowerCase() !== region) return;
 							else if (region !== '' && defectAddress.address.city && 'м. ' + defectAddress.address.city.toLowerCase() !== region) return;
+							foundResults = true;
 							allDefects.insertAdjacentHTML('beforeend', `
 								<div class="col-xs-12 col-sm-3">
 									<div class="card">
