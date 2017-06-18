@@ -67,9 +67,17 @@ class SiteMenu {
 				}, false);
 			});
 		});
+		this.sections.push(document.querySelector('.single-defect-section'));
 		// displaying first section
 		this.sections.map((s) => s.style.display = 'none');
 		this.sections[0].style.display = 'block';
+		window.scrollTo(0, 0);
+	}
+
+	showSingleCard() {
+		this.sections.map((s) => s.style.display = 'none');
+		const section = document.querySelector('.single-defect-section');
+		section.style.display = 'block';
 		window.scrollTo(0, 0);
 	}
 };
@@ -112,6 +120,7 @@ class Application {
 	clearMapMarkers() {
 		this.map.removeLayer(this.map.markers);
 		this.map.markers = new L.FeatureGroup();
+		this.map.invalidateSize(false);
 	}
 
 	updateDefects() {
@@ -153,7 +162,7 @@ class Application {
 			eStatus.innerHTML = '';
 			eStatus.insertAdjacentHTML('beforeend', `<option disabled selected>Статус виконання</option>`);
 			this.clearMapMarkers();
-			data.map((defect) => {
+			data.map((defect, i) => {
 				this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${defect.id}`, (err, components) => {
 					if (err) return alert(err);
 					/*************************************************************
@@ -187,8 +196,130 @@ class Application {
 						</div>
 					</div>
 				`);
+				if (i === data.length - 1) this.addMoreListeners();
 			});
 			this.map.addLayer(this.map.markers);
+		});
+	}
+
+	addMoreListeners() {
+		const singleDefectSubpageFiller = ({ title, creationDate, image, description, creator, address, modificationDate, statuses }) => {
+			document.querySelector('.single-defect-section').innerHTML = '';
+			document.querySelector('.single-defect-section').insertAdjacentHTML('beforeend', `
+				<div class="container">
+					<div class="row">
+						<div class="col-lg-12">
+							<h1 class="page-header">${title || ''} <small>${creationDate.getDate() || ''} ${this.MONTH[creationDate.getMonth()] || ''}, ${creationDate.getFullYear() || ''}</small></h1>
+						</div>
+					</div><!-- /.row -->
+
+					<div class="row">
+						<div class="col-md-8">
+							<img class="img-responsive" src="${image || 'http://placehold.it/750x500'}">
+						</div>
+						<div class="col-md-4">
+							<div id="map-single-defect" style="width: 100% !important; height: 30vh;"></div>
+							<h3>Опис заявки</h3>
+							<p>${description || ''}</p>
+							<h3>Деталі заявки</h3>
+							<ul>
+								<li>Додав: ${creator || ''}</li>
+								<li>Адреса: ${address || ''}</li>
+								<li>Додана: ${creationDate.toLocaleString() || ''}</li>
+								<li>Модифікована: ${modificationDate.toLocaleString() || ''}</li>
+							</ul>
+						</div>
+					</div><!-- /.row -->
+
+					${
+						statuses.length > 0 ? `
+						<div class="row">
+							<div class="col-lg-12">
+								<h3 class="page-header">Зміна статусів</h3>
+							</div>
+							<div class="col-lg-12">
+								<table class="table table-striped">
+									<thead>
+										<tr>
+											<th>З</th>
+											<th>На</th>
+											<th>Змінено</th>
+										</tr>
+									</thead>
+									<tbody>
+										${
+											statuses.reduce((result, { from, to, date }) => (
+												result + `
+												<tr>
+													<th scope="row">${from || ''}</th>
+													<td>${to || ''}</td>
+													<td>${date.toLocaleString() || ''}</td>
+												</tr>
+												`
+											), '')
+										}
+									</tbody>
+								</table>
+							</div>
+						</div><!-- /.row -->
+						` : ''
+					}
+				</div><!-- /.container -->
+			`);
+		};
+		// adding handler for single-defect-subpage load
+		Array.from(document.querySelectorAll('.more')).map((e) => {
+			e.addEventListener('click', (event) => {
+				event.preventDefault();
+				this.menu.showSingleCard();
+				const id = event.target.href.slice(event.target.href.indexOf('#') + 1) - '0';
+				this.requster.get(`http://drohobych.ml/api/v1/documents/${id}`, (err, data) => {
+					if (err) return alert(err);
+					this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${id}`, (err, details) => {
+						if (err) return alert(err);
+						let position = details.filter((d) => d['form_component_name'] === 'Map');
+						const description = details.filter((d) => d['form_component_name'] === 'Детальний опис проблеми')[0] || {};
+						this.requster.get(`http://rozumnemisto.ml/api/v1/proceeding/completed/${id}`, (err, statuses) => {
+							const sortedStatuses = statuses.sort((a, b) => a.id - b.id);
+							const statusesArray = sortedStatuses.map((s) => {
+								const transitionParts = s.transition.split(' -> ');
+								return { from: transitionParts[0], to: transitionParts[1], date: new Date(s['transaction_date']) };
+							});
+							if (position.length > 0) {
+								position = position[0].value;
+								this.requster.get(`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`, (err, defectAddress) => {
+									if (err) return alert(err);
+									singleDefectSubpageFiller({
+										title: data.title,
+										creationDate: new Date(data['date_created']),
+										image: data['title_image'],
+										description: description.value,
+										creator: data['created_by_name'],
+										address: defectAddress['display_name'],
+										modificationDate: new Date(data['date_updated']),
+										statuses: statusesArray
+									});
+									const singleDefectMap = L.map('map-single-defect', { scrollWheelZoom: false }).setView([position.lat, position.lng], 15);
+									L.tileLayer('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(singleDefectMap);
+									singleDefectMap.on('focus', () => singleDefectMap.scrollWheelZoom.enable());
+									singleDefectMap.on('blur', () => singleDefectMap.scrollWheelZoom.disable());
+									L.marker([position.lat, position.lng]).addTo(singleDefectMap);
+								});
+							} else {
+								singleDefectSubpageFiller({
+									title: data.title,
+									creationDate: new Date(data['date_created']),
+									image: data['title_image'],
+									description: description.value,
+									creator: data['created_by_name'],
+									modificationDate: new Date(data['date_updated']),
+									statuses: statusesArray
+								});
+							}
+						});
+					});
+				});
+			}, false);
 		});
 	}
 
