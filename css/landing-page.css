@@ -209,16 +209,10 @@ p.copyright {
   text-align: center;
 }
 
-.card .card-meta span.date {
+.card .card-meta span {
   font-weight: 700;
   font-size: 11px;
-  display: block;
-}
-
-.card .card-meta span.tags {
-  font-weight: 700;
-  font-size: 11px;
-  color: #ddd;
+  color: #fcfcfc;
   display: block;
 }
 

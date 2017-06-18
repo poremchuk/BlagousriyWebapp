@@ -50,7 +50,7 @@ class JSONRequester {
 class SiteMenu {
 	constructor(triggers) {
 		this.sections = [];
-		triggers.map((e, i) => {
+		triggers.map((e) => {
 			if (e.section) this.sections.push(e.section);
 			Array.from(e.trigger).map((t) => {
 				t.addEventListener('click', (event) => {
@@ -61,6 +61,8 @@ class SiteMenu {
 				}, false);
 			});
 		});
+		this.sections.map((s) => s.style.display = 'none');
+		this.sections[0].style.display = 'block';
 	}
 };
 
@@ -133,7 +135,7 @@ class Application {
 					</div>
 				`);
 			});
-
+			
 			// adding defect to the map
 			// TODO: process errors
 			const allDefects = document.querySelector('#allDefects');
@@ -149,6 +151,7 @@ class Application {
 							this.map.markers.addLayer(marker);
 						});
 				});
+				// this.requster.get(`http://nominatim.openstreetmap.org/reverse?format=json&lat=${e.value.lat}&lon=${e.value.lng}&zoom=18&accept-language=uk`, (err, addressData) => {});
 				// date transformation to user-friendly
 				const date = new Date(defect['date_created']);
 				// adding defect card to the page
@@ -157,8 +160,8 @@ class Application {
 						<div class="card">
 							<img class="img-responsive" src="${defect['title_image']}">
 							<div class="card-meta">
-								<span class="date">${date.getDate()} ${this.MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
-								<span class="tags"><a href="#">${defect['created_by_name']}</a></span>
+								<span>${date.getDate()} ${this.MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
+								<span><a href="#">${defect['created_by_name']}</a></span>
 							</div>
 							<div class="card-content">
 								<h5><a href="#${defect.id}">${defect.title}</a></h5>
