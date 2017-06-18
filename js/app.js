@@ -55,8 +55,9 @@ class SiteMenu {
 			Array.from(e.trigger).map((t) => {
 				t.addEventListener('click', (event) => {
 					event.preventDefault();
-					this.sections.map((s) => s.style.display = 'none');
-					e.section.style.display = 'block';
+					if (e.updater) e.updater();
+					if (e.section) this.sections.map((s) => s.style.display = 'none');
+					if (e.section) e.section.style.display = 'block';
 				}, false);
 			});
 		});
@@ -70,12 +71,16 @@ class Application {
   constructor(menu) {
 		// Site Menu
 		this.menu = menu;
-
+		// Map
+		this.map = L.map('map', { scrollWheelZoom: false }).setView([49, 33], 6);
+		L.tileLayer('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(this.map);
+		this.map.markers = new L.FeatureGroup();
+		this.map.on('focus', () => this.map.scrollWheelZoom.enable());
+		this.map.on('blur', () => this.map.scrollWheelZoom.disable());
 		// JSON processor
     this.requster = new JSONRequester();
-
 		// Month number to name converter
-		const MONTH = {
+		this.MONTH = {
       0: 'Січня',
       1: 'Лютого',
       2: 'Березня',
@@ -90,28 +95,33 @@ class Application {
       11: 'Грудня'
     };
 
-		// Adding map to the page
-    this.map = L.map('map', { scrollWheelZoom: false }).setView([49, 33], 6);
-		L.tileLayer('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(this.map);
-		this.map.on('focus', () => this.map.scrollWheelZoom.enable());
-		this.map.on('blur', () => this.map.scrollWheelZoom.disable());
+		this.clearMapMarkers();
+		this.updateDefects();
+  }
 
+	clearMapMarkers() {
+		this.map.removeLayer(this.map.markers);
+		this.map.markers = new L.FeatureGroup();
+	}
+
+	updateDefects() {
 		// Retriving defects from API
 		// TODO: process errors
-    this.requster.get('http://drohobych.ml/api/v1/documents/?workflow_type=defekt', (err, data) => {
-      if (err) return alert(err);
-      const defects = document.querySelector('#defects');
+		this.requster.get('http://drohobych.ml/api/v1/documents/?workflow_type=defekt', (err, data) => {
+			if (err) return alert(err);
+			const defects = document.querySelector('#defects');
+			defects.innerHTML = '';
 			// displays last 4 defects
-      data.sort((a, b) => new Date(b['date_created']) - new Date(a['date_created'])).slice(0, 8).map((defect) => {
+			data.sort((a, b) => new Date(b['date_created']) - new Date(a['date_created'])).slice(0, 8).map((defect) => {
 				// date transformation to user-friendly
 				const date = new Date(defect['date_created']);
 				// adding defect card to the page
-        defects.insertAdjacentHTML('beforeend', `
+				defects.insertAdjacentHTML('beforeend', `
 					<div class="col-xs-12 col-sm-3">
 						<div class="card">
 							<img class="img-responsive" src="${defect['title_image']}">
 							<div class="card-meta">
-								<span class="date">${date.getDate()} ${MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
+								<span class="date">${date.getDate()} ${this.MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
 								<span class="tags"><a href="#">${defect['created_by_name']}</a></span>
 							</div>
 							<div class="card-content">
@@ -121,30 +131,33 @@ class Application {
 							</div>
 						</div>
 					</div>
-        `);
-      });
+				`);
+			});
 
 			// adding defect to the map
 			// TODO: process errors
 			const allDefects = document.querySelector('#allDefects');
+			allDefects.innerHTML = '';
+			this.clearMapMarkers();
 			data.map((defect) => {
 				this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${defect.id}`, (err, components) => {
 					if (err) return alert(err);
 					components
 						.filter((e) => e['form_component_name'] === 'Map')
 						.map((e) => {
-							L.marker([e.value.lat, e.value.lng], { title: defect.title }).addTo(this.map);
+							const marker = L.marker([e.value.lat, e.value.lng], { title: defect.title });
+							this.map.markers.addLayer(marker);
 						});
 				});
 				// date transformation to user-friendly
 				const date = new Date(defect['date_created']);
 				// adding defect card to the page
-        allDefects.insertAdjacentHTML('beforeend', `
+				allDefects.insertAdjacentHTML('beforeend', `
 					<div class="col-xs-12 col-sm-3">
 						<div class="card">
 							<img class="img-responsive" src="${defect['title_image']}">
 							<div class="card-meta">
-								<span class="date">${date.getDate()} ${MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
+								<span class="date">${date.getDate()} ${this.MONTH[date.getMonth()]}, ${date.getFullYear()}</span>
 								<span class="tags"><a href="#">${defect['created_by_name']}</a></span>
 							</div>
 							<div class="card-content">
@@ -154,10 +167,11 @@ class Application {
 							</div>
 						</div>
 					</div>
-        `);
+				`);
 			});
-    });
-  }
+			this.map.addLayer(this.map.markers);
+		});
+	}
 
 	getURLhashParam(url) {
 		const parsedURL = url || new URL(window.location.href);

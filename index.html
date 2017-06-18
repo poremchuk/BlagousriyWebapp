@@ -112,11 +112,19 @@
     const menu = new SiteMenu([
       {
         trigger: document.querySelectorAll('.menu-main'),
-        section: document.querySelector('.main-section')
+        section: document.querySelector('.main-section'),
+        updater: () => {
+          app.clearMapMarkers();
+          app.updateDefects();
+        }
       },
       {
         trigger: document.querySelectorAll('.menu-defectsDatabase'),
-        section: document.querySelector('.defectsDatabase-section')
+        section: document.querySelector('.defectsDatabase-section'),
+        updater: () => {
+          app.clearMapMarkers();
+          app.updateDefects();
+        }
       },
       {
         trigger: document.querySelectorAll('.menu-signin')
