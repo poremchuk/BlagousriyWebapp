@@ -115,10 +115,6 @@
             <label class="sr-only" for="search-status">Статус виконання</label>
             <select class="form-control" id="search-status"></select>
           </div>
-          <div class="form-group">
-            <label class="sr-only" for="search-date">Дата</label>
-            <input type="date" class="form-control" id="search-date" placeholder="Дата">
-          </div>
           <button type="submit" class="btn btn-default" id="search-btn">Пошук</button>
         </form>
         <hr>
@@ -188,12 +184,10 @@
       elements.btn    = document.getElementById('search-btn');
       elements.region = document.getElementById('search-region');
       elements.status = document.getElementById('search-status');
-      elements.date   = document.getElementById('search-date');
       // search
       app.searchDefectsAndUpdate({
         region: elements.region.value,
-        status: elements.status.value,
-        date  : elements.date.value
+        status: elements.status.value
       });
       // clearance
       for (let e of Object.values(elements)) e.blur();

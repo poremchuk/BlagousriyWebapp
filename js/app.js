@@ -112,7 +112,6 @@ class Application {
       10: 'Листопада',
       11: 'Грудня'
     };
-
 		this.clearMapMarkers();
 		this.updateDefects();
   }
@@ -162,6 +161,9 @@ class Application {
 			eStatus.innerHTML = '';
 			eStatus.insertAdjacentHTML('beforeend', `<option disabled selected>Статус виконання</option>`);
 			this.clearMapMarkers();
+			this.requster.get(`http://rozumnemisto.ml/api/v1/builder/2/type/defekt`, (err, statuses) => {
+				statuses.map((s) => eStatus.insertAdjacentHTML('beforeend', `<option value="${s.slug}">${s.label}</option>`));
+			});
 			data.map((defect, i) => {
 				this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${defect.id}`, (err, components) => {
 					if (err) return alert(err);
@@ -178,7 +180,6 @@ class Application {
 				/*************************************************************
 				 * Displaying all defects on defects database subpage
 				 *************************************************************/
-				eStatus.insertAdjacentHTML('beforeend', `<option>${defect['state_field_name']}</option>`);
 				const date = new Date(defect['date_created']);
 				allDefects.insertAdjacentHTML('beforeend', `
 					<div class="col-xs-12 col-sm-3">
@@ -327,53 +328,70 @@ class Application {
 		});
 	}
 
-	searchDefectsAndUpdate({ region, status, date }) {
+	searchDefectsAndUpdate({ region, status }) {
 		// data unification
 		region = region.trim().toLowerCase();
 		region = region !== 'область' ? region : '';
 		status = status.trim().toLowerCase();
 		status = status !== 'статус виконання' ? status : '';
-		date 	 = date ? new Date(date.trim().toLowerCase()).toDateString() : '';
+
 		const allDefects = document.getElementById('allDefects');
 		allDefects.innerHTML = '';
 		let foundResults = false;
-		// data upload from API
-		this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/`, (err, defectsDetails) => {
-			this.requster.get('http://drohobych.ml/api/v1/documents/?workflow_type=defekt', (err, defects) => {
-				defects.map((defect, i) => {
-					const defectDate = new Date(defect['date_created']);
-					if (date !== '' && defectDate.toDateString() !== date) return;
-					if (status !== '' && defect['state_field_name'].toLowerCase() !== status) return;
-					let position = defectsDetails.filter((component) => component['form_component_name'] === 'Map' && component.document === defect.id);
-					if (position.length > 0) {
-						position = position[0].value;
-					} else return;
-					this.requster.get(
-						`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`,
-						(err, defectAddress) => {
-							if (!foundResults && i === defects.length - 1) allDefects.innerHTML = '<p class="lead">Результатів не знайдено.</p>';
-							if (i === defects.length - 1) this.addMoreListeners();
-							if (region !== '' && defectAddress.address.state && defectAddress.address.state.toLowerCase() !== region) return;
-							else if (region !== '' && defectAddress.address.city && 'м. ' + defectAddress.address.city.toLowerCase() !== region) return;
-							foundResults = true;
-							allDefects.insertAdjacentHTML('beforeend', `
-								<div class="col-xs-12 col-sm-3">
-									<div class="card">
-										<img class="img-responsive" src="${defect['title_image']}">
-										<div class="card-meta">
-											<span>${defectDate.getDate()} ${this.MONTH[defectDate.getMonth()]}, ${defectDate.getFullYear()}</span>
-											<span><a href="#">${defect['created_by_name']}</a></span>
-										</div>
-										<div class="card-content">
-											<h5><a href="#${defect.id}">${defect.title}</a></h5>
-											<p>${defect['state_field_name']}</p>
-											<a href="#${defect.id}" class="more">Детальніше</a>
-										</div>
-									</div>
-								</div>
-							`);
-						});
-				});
+
+		const allDefectsFiller = (defect) => {
+			const defectDate = new Date(defect['date_created']);
+			allDefects.insertAdjacentHTML('beforeend', `
+				<div class="col-xs-12 col-sm-3">
+					<div class="card">
+						<img class="img-responsive" src="${defect['title_image']}">
+						<div class="card-meta">
+							<span>${defectDate.getDate()} ${this.MONTH[defectDate.getMonth()]}, ${defectDate.getFullYear()}</span>
+							<span><a href="#">${defect['created_by_name']}</a></span>
+						</div>
+						<div class="card-content">
+							<h5><a href="#${defect.id}">${defect.title}</a></h5>
+							<p>${defect['state_field_name']}</p>
+							<a href="#${defect.id}" class="more">Детальніше</a>
+						</div>
+					</div>
+				</div>
+			`);
+		};
+
+		this.requster.get(`http://drohobych.ml/api/v1/documents/?workflow_type=defekt${status !== '' ? `&state=${status}` : ''}`, (err, results) => {
+			if (results.length === 0) return allDefects.innerHTML = '<p class="lead">Результатів не знайдено.</p>';
+			results.map((defect, i) => {
+				if (region !== '') {
+					this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${defect.id}`, (err, defectComponents) => {
+						let position = defectComponents.filter((component) => component['form_component_name'] === 'Map');
+						if (position.length > 0) {
+							position = position[0].value;
+						} else return;
+						this.requster.get(
+							`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`,
+							(err, defectAddress) => {
+								if (
+									(defectAddress.address.state && defectAddress.address.state.toLowerCase() === region) ||
+									(defectAddress.address.city && 'м. ' + defectAddress.address.city.toLowerCase() === region)
+								) {
+									allDefectsFiller(defect);
+									foundResults = true;
+								}
+								if (i === results.length - 1) {
+									if (!foundResults) allDefects.innerHTML = '<p class="lead">Результатів не знайдено.</p>';
+									this.addMoreListeners();
+								}
+							});
+					});
+				} else {
+					allDefectsFiller(defect);
+					foundResults = true;
+					if (i === results.length - 1) {
+						if (!foundResults) allDefects.innerHTML = '<p class="lead">Результатів не знайдено.</p>';
+						this.addMoreListeners();
+					}
+				}
 			});
 		});
 	}
