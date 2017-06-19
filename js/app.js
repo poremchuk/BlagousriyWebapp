@@ -267,59 +267,63 @@ class Application {
 				</div><!-- /.container -->
 			`);
 		};
-		// adding handler for single-defect-subpage load
-		Array.from(document.querySelectorAll('.more')).map((e) => {
-			e.addEventListener('click', (event) => {
-				event.preventDefault();
-				this.menu.showSingleCard();
-				const id = event.target.href.slice(event.target.href.indexOf('#') + 1) - '0';
-				this.requster.get(`http://drohobych.ml/api/v1/documents/${id}`, (err, data) => {
+
+		const handler = (event) => {
+			event.preventDefault();
+			this.menu.showSingleCard();
+			const id = event.target.href.slice(event.target.href.indexOf('#') + 1) - '0';
+			this.requster.get(`http://drohobych.ml/api/v1/documents/${id}`, (err, data) => {
+				if (err) return alert(err);
+				this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${id}`, (err, details) => {
 					if (err) return alert(err);
-					this.requster.get(`http://drohobych.ml/api/v1/formcomponentvalue/document/${id}`, (err, details) => {
-						if (err) return alert(err);
-						let position = details.filter((d) => d['form_component_name'] === 'Map');
-						const description = details.filter((d) => d['form_component_name'] === 'Детальний опис проблеми')[0] || {};
-						this.requster.get(`http://rozumnemisto.ml/api/v1/proceeding/completed/${id}`, (err, statuses) => {
-							const sortedStatuses = statuses.sort((a, b) => a.id - b.id);
-							const statusesArray = sortedStatuses.map((s) => {
-								const transitionParts = s.transition.split(' -> ');
-								return { from: transitionParts[0], to: transitionParts[1], date: new Date(s['transaction_date']) };
-							});
-							if (position.length > 0) {
-								position = position[0].value;
-								this.requster.get(`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`, (err, defectAddress) => {
-									if (err) return alert(err);
-									singleDefectSubpageFiller({
-										title: data.title,
-										creationDate: new Date(data['date_created']),
-										image: data['title_image'],
-										description: description.value,
-										creator: data['created_by_name'],
-										address: defectAddress['display_name'],
-										modificationDate: new Date(data['date_updated']),
-										statuses: statusesArray
-									});
-									const singleDefectMap = L.map('map-single-defect', { scrollWheelZoom: false }).setView([position.lat, position.lng], 15);
-									L.tileLayer('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(singleDefectMap);
-									singleDefectMap.on('focus', () => singleDefectMap.scrollWheelZoom.enable());
-									singleDefectMap.on('blur', () => singleDefectMap.scrollWheelZoom.disable());
-									L.marker([position.lat, position.lng]).addTo(singleDefectMap);
-								});
-							} else {
+					let position = details.filter((d) => d['form_component_name'] === 'Map');
+					const description = details.filter((d) => d['form_component_name'] === 'Детальний опис проблеми')[0] || {};
+					this.requster.get(`http://rozumnemisto.ml/api/v1/proceeding/completed/${id}`, (err, statuses) => {
+						const sortedStatuses = statuses.sort((a, b) => a.id - b.id);
+						const statusesArray = sortedStatuses.map((s) => {
+							const transitionParts = s.transition.split(' -> ');
+							return { from: transitionParts[0], to: transitionParts[1], date: new Date(s['transaction_date']) };
+						});
+						if (position.length > 0) {
+							position = position[0].value;
+							this.requster.get(`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`, (err, defectAddress) => {
+								if (err) return alert(err);
 								singleDefectSubpageFiller({
 									title: data.title,
 									creationDate: new Date(data['date_created']),
 									image: data['title_image'],
 									description: description.value,
 									creator: data['created_by_name'],
+									address: defectAddress['display_name'],
 									modificationDate: new Date(data['date_updated']),
 									statuses: statusesArray
 								});
-							}
-						});
+								const singleDefectMap = L.map('map-single-defect', { scrollWheelZoom: false }).setView([position.lat, position.lng], 15);
+								L.tileLayer('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>' }).addTo(singleDefectMap);
+								singleDefectMap.on('focus', () => singleDefectMap.scrollWheelZoom.enable());
+								singleDefectMap.on('blur', () => singleDefectMap.scrollWheelZoom.disable());
+								L.marker([position.lat, position.lng]).addTo(singleDefectMap);
+							});
+						} else {
+							singleDefectSubpageFiller({
+								title: data.title,
+								creationDate: new Date(data['date_created']),
+								image: data['title_image'],
+								description: description.value,
+								creator: data['created_by_name'],
+								modificationDate: new Date(data['date_updated']),
+								statuses: statusesArray
+							});
+						}
 					});
 				});
-			}, false);
+			});
+		};
+
+		// adding handler for single-defect-subpage load
+		Array.from(document.querySelectorAll('.more')).map((e) => {
+			e.removeEventListener('click', handler);
+			e.addEventListener('click', handler, false);
 		});
 	}
 
@@ -348,6 +352,7 @@ class Application {
 						`http://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&zoom=18&accept-language=uk`,
 						(err, defectAddress) => {
 							if (!foundResults && i === defects.length - 1) allDefects.innerHTML = '<p class="lead">Результатів не знайдено.</p>';
+							if (i === defects.length - 1) this.addMoreListeners();
 							if (region !== '' && defectAddress.address.state && defectAddress.address.state.toLowerCase() !== region) return;
 							else if (region !== '' && defectAddress.address.city && 'м. ' + defectAddress.address.city.toLowerCase() !== region) return;
 							foundResults = true;
