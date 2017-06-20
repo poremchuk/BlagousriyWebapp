@@ -41,13 +41,13 @@ a:hover, a:active {
 
 .lead {
   text-align: center;
-  font-size: 30px;
+  font-size: 25px;
   font-weight: 700;
     color: #00A65A;
 }
 
 .page-header{
-  font-size: 30px;
+  font-size: 25px;
   font-weight: 700;
     color: #00A65A;
 }
@@ -150,7 +150,11 @@ footer {
 
 .list-inline.footer li , .list-inline.footer li a{
   font-size: 20px;
-    color: #fff;
+  color: #fff;
+}
+
+.list-inline.footer li a:hover{
+  color: #00a65a;
 }
 
 p.copyright {
@@ -190,11 +194,14 @@ p.copyright {
 }
 
 .card .card-content h5 a {
-  font-size: 20px;
+  display: block;
+    font-size: 20px;
+  overflow: hidden;
+    max-height: 23px;
 }
 
 .card .card-content h5 a:hover {
-  color: #312f2b;
+  color: #00a65a;
   text-decoration: none;
 }
 
@@ -211,7 +218,7 @@ p.copyright {
 }
 
 .card .card-meta span {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 16px;
   color: #fcfcfc;
   display: block;
@@ -229,11 +236,11 @@ p.copyright {
 .nav.navbar-nav.navbar-right li a.btn.btn-lg.btn-primary {
   position: relative;
   vertical-align: top;
-  width: 100%;
+  width: 200px;
   height: 50px;
   padding: 12px 20px;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 500;
   color: #fff;
   text-align: center;
   background: #00A65A;
@@ -267,4 +274,16 @@ p.copyright {
   #map-single-defect{ 
       margin-top: 10px;
     }
+}
+
+.form-inline button.btn.btn-default {
+  position: relative;
+  vertical-align: top;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  background: #00A65A;
+  border: 1px solid #00733E;
+  cursor: pointer;
 }
