@@ -223,7 +223,7 @@ class Application {
 							<h3>Опис заявки</h3>
 							<p>${description || ''}</p>
 							<h3>Деталі заявки</h3>
-							<ul>
+							<ul class="details">
 								<li>Додав: ${creator || ''}</li>
 								<li>Адреса: ${address || ''}</li>
 								<li>Додана: ${creationDate.toLocaleString() || ''}</li>
